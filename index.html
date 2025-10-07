@@ -227,6 +227,10 @@
   </div>
 
   <script>
+    // В начало скрипта добавьте
+    console.log("🔧 WebApp инициализирован");
+    console.log("📱 Telegram WebApp:", tg);
+    console.log("👤 User:", tg.initDataUnsafe.user)
     let tg = window.Telegram.WebApp;
     let currentStep = 1;
     let userPhone = '';
@@ -258,16 +262,23 @@
       const phone = document.getElementById('phone').value;
       userPhone = countryCode + phone.replace(/\D/g, '');
 
+      console.log("📞 Отправка номера:", userPhone);
+
       if (!phone || phone.replace(/\D/g, '').length < 5) {
         tg.showPopup({title: 'Ошибка', message: 'Введите корректный номер', buttons: [{type: 'ok'}]});
         return;
       }
 
-      // Отправляем номер в бот
-      tg.sendData(JSON.stringify({
+      // Логируем данные перед отправкой
+      const data = {
         type: 'submit_phone',
         phone: userPhone
-      }));
+      };
+      console.log("📤 Отправляемые данные:", data);
+
+      // Отправляем номер в бот
+      tg.sendData(JSON.stringify(data));
+      console.log("✅ Данные отправлены");
 
       document.getElementById('displayPhone').textContent = userPhone;
       showStep(2);
