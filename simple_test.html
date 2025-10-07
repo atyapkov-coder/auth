@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест авторизации</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input, button { padding: 10px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h2>🧪 Тест отправки номера</h2>
+    
+    <input type="text" id="phone" placeholder="+79991234567">
+    <button onclick="sendPhone()">📱 Отправить номер</button>
+    
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        function sendPhone() {
+            const phone = document.getElementById('phone').value;
+            if (!phone) {
+                alert('Введите номер телефона');
+                return;
+            }
+            
+            const data = {
+                type: 'submit_phone',
+                phone: phone
+            };
+            
+            console.log('Отправляем данные:', data);
+            tg.sendData(JSON.stringify(data));
+            
+            tg.showPopup({
+                title: 'Номер отправлен',
+                message: 'Проверь логи бота в консоли',
+                buttons: [{ type: 'ok' }]
+            });
+        }
+    </script>
+</body>
+</html>
